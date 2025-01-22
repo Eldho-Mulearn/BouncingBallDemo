@@ -1,105 +1,99 @@
-// set up canvas
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
-const canvas = document.querySelector("canvas");
-const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-const width = (canvas.width = window.innerWidth);
-const height = (canvas.height = window.innerHeight);
+let balls = [];
+let colors = ['orange', 'cyan', 'lime', 'pink', 'teal'];
+let cursorRadius = 30;
+let totalCaught = 0;
 
-// function to generate random number
+document.addEventListener('mousemove', (e) => {
+    cursor.x = e.clientX;
+    cursor.y = e.clientY;
+});
 
-function random(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-// function to generate random RGB color value
-
-function randomRGB() {
-    return `rgb(${random(0, 255)},${random(0, 255)},${random(0, 255)})`;
-}
+let cursor = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: cursorRadius,
+};
 
 class Ball {
-    constructor(x, y, velX, velY, color, size) {
+    constructor(x, y, radius, color) {
         this.x = x;
         this.y = y;
-        this.velX = velX;
-        this.velY = velY;
+        this.radius = radius;
         this.color = color;
-        this.size = size;
+        this.dx = Math.random() * 4 - 2;
+        this.dy = Math.random() * 4 - 2;
     }
 
     draw() {
         ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
-        ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI);
         ctx.fill();
+        ctx.closePath();
     }
 
     update() {
-        if (this.x + this.size >= width) {
-            this.velX = -Math.abs(this.velX);
+        this.x += this.dx;
+        this.y += this.dy;
+
+        if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
+            this.dx = -this.dx;
+        }
+        if (this.y + this.radius > canvas.height || this.y - this.radius < 0) {
+            this.dy = -this.dy;
         }
 
-        if (this.x - this.size <= 0) {
-            this.velX = Math.abs(this.velX);
-        }
-
-        if (this.y + this.size >= height) {
-            this.velY = -Math.abs(this.velY);
-        }
-
-        if (this.y - this.size <= 0) {
-            this.velY = Math.abs(this.velY);
-        }
-
-        this.x += this.velX;
-        this.y += this.velY;
+        this.checkCollision();
+        this.draw();
     }
 
-    collisionDetect() {
-        for (const ball of balls) {
-            if (!(this === ball)) {
-                const dx = this.x - ball.x;
-                const dy = this.y - ball.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+    checkCollision() {
+        let distX = this.x - cursor.x;
+        let distY = this.y - cursor.y;
+        let distance = Math.sqrt(distX * distX + distY * distY);
 
-                if (distance < this.size + ball.size) {
-                    ball.color = this.color = randomRGB();
-                }
-            }
+        if (distance < this.radius + cursor.radius) {
+            totalCaught++;
+            document.getElementById('totalCaught').innerText = totalCaught;
+            this.respawn();
         }
+    }
+
+    respawn() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.dx = Math.random() * 4 - 2;
+        this.dy = Math.random() * 4 - 2;
     }
 }
 
-const balls = [];
-
-while (balls.length < 25) {
-    const size = random(10, 20);
-    const ball = new Ball(
-        // ball position always drawn at least one ball width
-        // away from the edge of the canvas, to avoid drawing errors
-        random(0 + size, width - size),
-        random(0 + size, height - size),
-        random(-7, 7),
-        random(-7, 7),
-        randomRGB(),
-        size
-    );
-
-    balls.push(ball);
-}
-
-function loop() {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
-    ctx.fillRect(0, 0, width, height);
-
-    for (const ball of balls) {
-        ball.draw();
-        ball.update();
-        ball.collisionDetect();
+function init() {
+    for (let i = 0; i < 15; i++) {
+        let x = Math.random() * canvas.width;
+        let y = Math.random() * canvas.height;
+        let color = colors[Math.floor(Math.random() * colors.length)];
+        balls.push(new Ball(x, y, 20, color));
     }
-
-    requestAnimationFrame(loop);
 }
 
-loop();
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    balls.forEach(ball => ball.update());
+
+    ctx.beginPath();
+    ctx.arc(cursor.x, cursor.y, cursor.radius, 0, Math.PI * 2);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+    ctx.closePath();
+
+    requestAnimationFrame(animate);
+}
+
+init();
+animate();
